@@ -1,8 +1,10 @@
 "use client";
+
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 export default function Page() {
-  // --- CONFIGURATION (replace with real keys or env variables) ---
+  // --- CONFIGURATION ---
   const apiKeys = {
     gemini: "", // process.env.NEXT_PUBLIC_GEMINI_KEY
     openai: "", // process.env.NEXT_PUBLIC_OPENAI_KEY
@@ -14,12 +16,11 @@ export default function Page() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState({});
-  const [geminiResponse, setGeminiResponse] = useState({});
   const aiModels = [
     { name: "Gemini", key: "gemini", color: "blue" },
     { name: "ChatGPT", key: "openai", color: "green" },
     { name: "Grok", key: "grok", color: "indigo" },
-    { name: "Blackbox", key: "blackbox", color: "gray" },
+    { name: "Blackbox", key: "blackbox", color: "yellow" },
   ];
 
   // --- HANDLERS ---
@@ -31,10 +32,9 @@ export default function Page() {
     setLoading(true);
     setResponses({});
 
-    fetchAIResponse(prompt);
-    // const results = await Promise.allSettled(
-    //   aiModels.map((model) => fetchAIResponse(prompt))
-    // );
+    const results = await Promise.allSettled(
+      aiModels.map((model) => fetchAIResponse(model.key, prompt))
+    );
 
     const newResponses = {};
     results.forEach((result, i) => {
@@ -48,139 +48,106 @@ export default function Page() {
     setLoading(false);
   };
 
-  // --- API CALLER ---
-  async function fetchAIResponse(prompt) {
-    switch ("gemini") {
-      case "gemini": {
-        const url = `/api/ai/gemini`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ prompt: prompt }),
-        });
-
-        if (!response.ok)
-          throw new Error(`Gemini API error: ${response.statusText}`);
-        const data = await response.json();
-
-        setResponses((prev) => ({
-          ...prev,
-          gemini: data.res,
-        }));
-        // setGeminiResponse(data);
-        return (
-          data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-          "No response"
-        );
-      }
-      case "openai": {
-        const response = await fetch(
-          "https://api.openai.com/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-3.5-turbo",
-              messages: [{ role: "user", content: prompt }],
-            }),
-          }
-        );
-        if (!response.ok)
-          throw new Error(`OpenAI API error: ${response.statusText}`);
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content?.trim() || "No response";
-      }
-      case "grok": {
-        // Placeholder — Grok API not public
-        throw new Error("Grok API not available yet.");
-      }
-      case "blackbox": {
-        const response = await fetch(
-          "https://api.blackbox.ai/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: "blackboxai/openai/gpt-4",
-              messages: [{ role: "user", content: prompt }],
-            }),
-          }
-        );
-        if (!response.ok)
-          throw new Error(`Blackbox API error: ${response.statusText}`);
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content?.trim() || "No response";
-      }
-      default:
-        throw new Error("Unknown model");
-    }
+  // --- API CALLER (mock for now) ---
+  async function fetchAIResponse(model, prompt) {
+    await new Promise((r) => setTimeout(r, 1500)); // simulate delay
+    return `🔮 Response from ${model}: "${prompt}"`;
   }
 
   // --- UI ---
   return (
-    <div className="bg-gray-900 min-h-screen text-white font-sans">
-      <div className="container mx-auto p-4 md:p-8">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+    <div className="bg-gradient-to-b from-gray-900 via-gray-950 to-black min-h-screen text-white font-sans">
+      <div className="container mx-auto p-6 md:p-10">
+        {/* HEADER */}
+        <motion.header
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-green-400 to-purple-500">
             Multi-AI Prompt Comparator
           </h1>
-          <p className="text-gray-400 mt-2">
-            Send one prompt to four different AI models and see their responses
-            side-by-side.
+          <p className="text-gray-400 mt-3 text-lg">
+            Compare responses from different AI models side-by-side in real time.
           </p>
-        </header>
+        </motion.header>
 
-        <main>
-          {/* Prompt Input */}
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-10">
-            <div className="flex flex-col md:flex-row gap-4">
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="flex-grow bg-gray-700 text-white border border-gray-600 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your prompt here..."
-              />
-              <button
-                onClick={handleSendPrompt}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300"
-                disabled={loading}
-              >
-                {loading ? "Loading..." : "Send Prompt"}
-              </button>
-            </div>
+        {/* PROMPT INPUT */}
+        <motion.div
+          className="bg-gray-900/70 backdrop-blur-md border border-gray-700 p-6 rounded-2xl shadow-lg mb-10 sticky top-6 z-20"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="flex flex-col md:flex-row gap-4">
+            <input
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="flex-grow bg-gray-800 text-white border border-gray-600 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              placeholder="💡 Enter your prompt here..."
+            />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSendPrompt}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-colors duration-300"
+              disabled={loading}
+            >
+              {loading ? "Thinking..." : "Send Prompt"}
+            </motion.button>
           </div>
+        </motion.div>
 
-          {/* Results Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {aiModels.map((model) => (
-              <div
-                key={model.key}
-                className={`ai-output-column bg-gray-800 p-5 rounded-xl shadow-lg border border-${model.color}-500/30 h-[600px] overflow-y-auto .scrollbar-hide`}
+        {/* RESULTS */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          {aiModels.map((model) => (
+            <motion.div
+              key={model.key}
+              className={`bg-gray-900/80 backdrop-blur-xl p-6 rounded-2xl shadow-lg border h-[600px] overflow-y-auto relative group`}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 150 }}
+            >
+              {/* MODEL NAME */}
+              <h2
+                className={`text-xl font-semibold mb-4 text-${model.color}-400`}
               >
-                <h2
-                  className={`text-xl font-semibold mb-4 text-${model.color}-400`}
-                >
-                  {model.name}
-                </h2>
-                <div className="text-gray-300 whitespace-pre-wrap break-words">
-                  {loading && !responses[model.key] && (
-                    <div className="loader mx-auto border-4 border-gray-500 border-t-blue-500 rounded-full w-8 h-8 animate-spin"></div>
-                  )}
-                  {responses[model.key] || "Waiting for prompt..."}
+                {model.name}
+              </h2>
+
+              {/* LOADER */}
+              {loading && !responses[model.key] && (
+                <div className="flex justify-center items-center h-full">
+                  <motion.div
+                    className="w-10 h-10 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin"
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                  />
                 </div>
-              </div>
-            ))}
-          </div>
-        </main>
+              )}
+
+              {/* RESPONSE */}
+              {!loading && (
+                <motion.div
+                  className="text-gray-300 whitespace-pre-wrap break-words leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  {responses[model.key] || (
+                    <span className="text-gray-500">⌛ Waiting for input...</span>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </div>
   );
