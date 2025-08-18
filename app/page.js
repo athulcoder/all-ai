@@ -14,6 +14,7 @@ export default function Page() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [responses, setResponses] = useState({});
+  const [geminiResponse, setGeminiResponse] = useState({});
   const aiModels = [
     { name: "Gemini", key: "gemini", color: "blue" },
     { name: "ChatGPT", key: "openai", color: "green" },
@@ -30,9 +31,10 @@ export default function Page() {
     setLoading(true);
     setResponses({});
 
-    const results = await Promise.allSettled(
-      aiModels.map((model) => fetchAIResponse(prompt, model.key))
-    );
+    fetchAIResponse(prompt);
+    // const results = await Promise.allSettled(
+    //   aiModels.map((model) => fetchAIResponse(prompt))
+    // );
 
     const newResponses = {};
     results.forEach((result, i) => {
@@ -47,21 +49,27 @@ export default function Page() {
   };
 
   // --- API CALLER ---
-  async function fetchAIResponse(prompt, modelKey) {
-    const apiKey = apiKeys[modelKey];
-    if (!apiKey) throw new Error("API key is missing.");
-
-    switch (modelKey) {
+  async function fetchAIResponse(prompt) {
+    switch ("gemini") {
       case "gemini": {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const url = `/api/ai/gemini`;
         const response = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: prompt }),
         });
+
         if (!response.ok)
           throw new Error(`Gemini API error: ${response.statusText}`);
         const data = await response.json();
+
+        setResponses((prev) => ({
+          ...prev,
+          gemini: data.res,
+        }));
+        // setGeminiResponse(data);
         return (
           data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
           "No response"
@@ -156,7 +164,7 @@ export default function Page() {
             {aiModels.map((model) => (
               <div
                 key={model.key}
-                className={`ai-output-column bg-gray-800 p-5 rounded-xl shadow-lg border border-${model.color}-500/30`}
+                className={`ai-output-column bg-gray-800 p-5 rounded-xl shadow-lg border border-${model.color}-500/30 h-[600px] overflow-y-auto .scrollbar-hide`}
               >
                 <h2
                   className={`text-xl font-semibold mb-4 text-${model.color}-400`}
